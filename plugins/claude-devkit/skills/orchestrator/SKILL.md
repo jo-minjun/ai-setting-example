@@ -13,7 +13,8 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 2. **계약 기반**: 페이즈 간 Contract로 정보 전달
 3. **게이트 통제**: 조건 미충족 시 다음 단계 차단
 4. **자동 루프**: 작업 완료까지 사용자 개입 없이 진행
-5. **세션 유지**: 컨텍스트와 Contract를 세션 파일로 관리
+5. **세션 유지**: 컨텍스트와 Contract를 세션 디렉터리로 관리
+6. **지식 축적**: 세션에서 학습한 내용을 프로젝트 지식으로 축적
 
 ## 오케스트레이션 루프
 
@@ -34,36 +35,52 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 
 ## 세션 관리
 
-오케스트레이터는 `~/.claude/claude-devkit/sessions/` 에 세션 파일을 관리한다.
-세션 파일에는 프로젝트 정보, 작업 상태, Contract, 탐색 결과가 저장된다.
+오케스트레이터는 세션 디렉터리를 통해 작업 상태와 Contract를 관리한다.
+
+```
+~/.claude/claude-devkit/sessions/{projectName}-{projectDirectoryHash}-{datetime}/
+├── state.yaml           # 현재 상태 (자주 갱신)
+├── timeline.jsonl       # 이벤트 로그 (append only)
+├── contracts/           # Contract 파일들
+└── explored/            # 탐색 결과 캐시
+```
+
+> 세션 디렉터리 구조 상세: [session.md](references/session.md)
+
+### 세션 정책
+
+| 명령 | 동작 |
+|------|------|
+| `/orchestrator` | 항상 새 세션 생성 |
+| `/orchestrator resume` | 기존 세션 목록에서 선택 |
 
 상세: [session.md](references/session.md)
 
-### 세션 시작 시 (Parallel Discovery 페이즈)
+### 세션 시작 공통 (새 세션/재개 모두)
 
-오케스트레이터가 시작되면:
+1. **미분석 이벤트 확인** (프로젝트 지식 동기화 체크)
+   - knowledge 파일의 `last_synced_ts`와 이전 세션들의 timeline 비교
+   - 미분석 이벤트가 있으면 알림:
+     ```
+     ┌────────────────────────────────────────┐
+     │ 미분석 이벤트가 있습니다.              │
+     │ /orchestrator learn 으로 지식 축적     │
+     └────────────────────────────────────────┘
+     ```
+2. **프로젝트 지식 로드** (있는 경우)
 
-1. **세션 파일 확인/생성**
-   ```yaml
-   session:
-     project_path: {{현재 작업 디렉토리}}
-     reference_path: {{참고 프로젝트 경로, 있는 경우}}
-     current_task: M1
-     current_phase: parallel_discovery
-   ```
+### Parallel Discovery 페이즈
 
-2. **병렬 실행** (Code Explore + Planner 동시 실행)
+1. **병렬 실행** (Code Explore + Planner 동시 실행)
    - **Task A - Code Explore**: 프로젝트 구조 파악, 주요 파일 요약
    - **Task B - Planner**: 코드 탐색 결과 없이 잠정 계획 수립 (assumptions 포함)
    - 두 Task 완료 대기
 
-3. **결과 저장**
-   - Code Explore 결과 → `session.explored_files`
-   - Code Explore의 project_manifest → `session.project_manifest` (CLAUDE.md, AGENTS.md 경로)
-   - Planner 결과 → `session.contracts.preliminary_design_brief`
+2. **결과 저장**
+   - Code Explore 결과 → `explored/files.yaml`
+   - Planner 결과 → `contracts/Tn.preliminary-design-brief.yaml`
 
-4. **Merge 페이즈로 전환**
-   - `current_phase: merge`
+3. **Merge 페이즈로 전환**
 
 ## 에이전트 호출 순서
 
@@ -75,13 +92,14 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 | 1 | Architect | 설계 확정 | Design Brief | Design Contract |
 | 2 | QA Engineer | 테스트 작성 | Design Contract | Test Contract + 테스트 코드 |
 | 3 | Implementer | 구현 | Design Contract + Test Contract | 구현 코드 |
-| 4 | QA Engineer | 테스트 실행 | 구현 코드 + Test Contract | Test Result Report |
+| 4 | QA Engineer | 테스트 실행 | 구현 코드 + Test Contract | Test Result |
 
 > **Note**: 0a와 0b는 병렬로 실행됨. 0c(Merge)는 두 작업 완료 후 오케스트레이터가 직접 수행.
 
 ## Contract 체인
 
 각 페이즈의 출력은 다음 페이즈의 입력으로 **자동 주입**된다.
+Contract는 개별 파일로 저장된다.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -114,42 +132,7 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
                                         (Verification)
 ```
 
-### 서브에이전트 호출 시 컨텍스트 주입 템플릿
-
-**모든 에이전트 공통:**
-```
-[세션 컨텍스트]
-- 프로젝트: {{session.project_path}}
-- 참고: {{session.reference_path}}
-- 현재 작업: {{session.current_task}}
-
-[탐색된 파일 요약]
-{{session.explored_files | summary}}
-```
-
-**Architect 호출 시 추가:**
-```
-[Design Brief]
-{{session.contracts.design_brief}}
-```
-
-**QA Engineer (Test First) 호출 시 추가:**
-```
-[Design Contract]
-{{session.contracts.design_contract}}
-```
-
-**Implementer 호출 시 추가:**
-```
-[Design Contract]
-{{session.contracts.design_contract}}
-
-[Test Contract]
-{{session.contracts.test_contract}}
-
-[테스트 코드]
-{{test_file_content}}
-```
+상세: [contracts.md](references/contracts.md), [agent-contexts.md](references/agent-contexts.md)
 
 ## 상태 시각화
 
@@ -168,31 +151,13 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 ║                                                           ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Tasks                                                    ║
-║  ├─ M1 Repository      ✅ completed                       ║
-║  ├─ M2 Service         🔄 in_progress  ← current          ║
-║  └─ M3 Controller      ⏳ pending                         ║
+║  ├─ T1 Repository     ✅ completed                        ║
+║  ├─ T2 Service        🔄 in_progress  ← current           ║
+║  └─ T3 Controller     ⏳ pending                          ║
 ║                                                           ║
 ║  Current Phase: Test First                                ║
 ║  Next Agent: QA Engineer                                  ║
 ║  Gates: GATE-1 ⏳                                         ║
-╚══════════════════════════════════════════════════════════╝
-```
-
-**병렬 실행 중 상태:**
-
-```
-╔══════════════════════════════════════════════════════════╗
-║  TDD Orchestrator - Parallel Discovery                    ║
-╠══════════════════════════════════════════════════════════╣
-║                                                           ║
-║  ┌─────────────────┐     ┌─────────────────┐             ║
-║  │  Code Explore   │     │    Planner      │             ║
-║  │       🔄        │     │       🔄        │             ║
-║  │   analyzing...  │     │   planning...   │             ║
-║  └─────────────────┘     └─────────────────┘             ║
-║                                                           ║
-║  Waiting for both tasks to complete...                    ║
-║                                                           ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
@@ -204,12 +169,11 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 | 🔄 | 진행 중 (in_progress) |
 | ⏳ | 대기 (pending) |
 | ❌ | 실패 (failed) |
-| ⚠️ | 경고 (warning) |
 
 ### 페이즈별 간략 상태 (한 줄)
 
 ```
-[M2 Service] Planning ✅ → Design ✅ → Test 🔄 → Impl ⏳ → Verify ⏳
+[T2 Service] Planning ✅ → Design ✅ → Test 🔄 → Impl ⏳ → Verify ⏳
 ```
 
 ## 게이트 규칙 요약
@@ -223,22 +187,28 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 
 상세 규칙: [gate-rules.md](references/gate-rules.md)
 
-## 참조 문서
+## 명령어
 
-| 문서 | 내용 |
+| 명령 | 설명 |
 |------|------|
-| [session.md](references/session.md) | 세션 컨텍스트 관리 |
-| [gate-rules.md](references/gate-rules.md) | 게이트 규칙 상세 |
-| [contracts.md](references/contracts.md) | Contract 형식 (Design Brief, Design Contract, Test Contract) |
-| [phases.md](references/phases.md) | 페이즈별 상세 절차 |
-| [agent-contexts.md](references/agent-contexts.md) | 에이전트별 컨텍스트 주입 가이드 |
+| `/orchestrator` | 오케스트레이터 시작 |
+| `/orchestrator status` | 현재 세션 상태 출력 |
+| `/orchestrator resume` | 중단된 세션 재개 |
+| `/orchestrator reset` | 세션 초기화 |
+| `/orchestrator learn` | 지식 축적 (timeline 분석 + 프로젝트 스캔) |
+
+### /orchestrator learn
+
+세션에서 학습한 내용을 프로젝트 지식으로 축적한다. Timeline 분석과 프로젝트 스캔을 수행.
+
+상세: [knowledge.md](references/knowledge.md)
 
 ## 실행 흐름
 
 ### 1. Parallel Discovery (세션 초기화)
 
 ```
-1. 세션 파일 생성/로드
+1. 세션 디렉터리 생성/로드
 2. 병렬로 두 Task 에이전트 호출:
 
    [Task A: Code Explore]
@@ -250,10 +220,9 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
    - subagent_type: "planner"
 
 3. 두 Task 모두 완료 대기
-4. 결과 저장:
-   - Task A → session.explored_files
-   - Task B → session.contracts.preliminary_design_brief
-5. 상태 출력
+4. 결과 저장
+5. timeline.jsonl에 이벤트 기록
+6. 상태 출력
 ```
 
 ### 2. Merge (결과 병합)
@@ -268,7 +237,7 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
    - scope_in/scope_out 조정
    - completion_criteria 보완
    - 누락된 의존성 추가
-4. 최종 design_brief 생성 → session.contracts.design_brief
+4. 최종 design_brief 생성 → contracts/Tn.design-brief.yaml
 5. 가정 50% 이상 불일치 시: Planner 재호출 (순차 모드)
 6. 상태 출력
 ```
@@ -277,21 +246,18 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 
 ```
 1. 세션 컨텍스트 + Design Brief 주입
-2. Architect 호출:
-   - prompt: "[세션 컨텍스트]\n[Design Brief]\n기반으로 Design Contract 생성"
-   - subagent_type: "architect"
-3. Design Contract를 session.contracts.design_contract에 저장
-4. 상태 출력
+2. Architect 호출
+3. Design Contract 저장 → contracts/Tn.design-contract.yaml
+4. timeline.jsonl에 이벤트 기록
+5. 상태 출력
 ```
 
 ### 4. Test First
 
 ```
 1. 세션 컨텍스트 + Design Contract 주입
-2. QA Engineer 호출:
-   - prompt: "[세션 컨텍스트]\n[Design Contract]\n기반으로 테스트 코드 작성"
-   - subagent_type: "qa-engineer"
-3. Test Contract를 session.contracts.test_contract에 저장
+2. QA Engineer 호출
+3. Test Contract 저장 → contracts/Tn.test-contract.yaml
 4. GATE-1 검증
 5. 상태 출력
 ```
@@ -300,9 +266,7 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 
 ```
 1. 세션 컨텍스트 + Design Contract + Test Contract + 테스트 코드 주입
-2. Implementer 호출:
-   - prompt: "[세션 컨텍스트]\n[Design Contract]\n[Test Contract]\n[테스트 코드]\n테스트를 통과하는 최소 구현"
-   - subagent_type: "implementer"
+2. Implementer 호출
 3. GATE-3, GATE-4 검증
 4. 상태 출력
 ```
@@ -310,10 +274,8 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 ### 6. Verification
 
 ```
-1. QA Engineer 호출:
-   - prompt: "테스트 실행 및 결과 보고"
-   - subagent_type: "qa-engineer"
-2. Test Result를 session.contracts.test_result에 저장
+1. QA Engineer 호출
+2. Test Result 저장 → contracts/Tn.test-result.yaml
 3. GATE-2 검증
 4. 결과에 따라:
    - PASS → Complete
@@ -326,18 +288,10 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 
 ```
 1. 작업 완료 처리
-2. 다음 작업 시작 또는 종료
-3. 최종 상태 출력
+2. timeline.jsonl에 task_complete 기록
+3. 다음 작업 시작 또는 종료
+4. 최종 상태 출력
 ```
-
-## 명령어
-
-| 명령 | 설명 |
-|------|------|
-| `/orchestrator` | 오케스트레이터 시작 |
-| `/orchestrator status` | 현재 세션 상태 출력 |
-| `/orchestrator resume` | 중단된 세션 재개 |
-| `/orchestrator reset` | 세션 초기화 |
 
 ## 제약사항
 
@@ -345,4 +299,15 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 - Contract 불완전 시 다음 단계 진행 금지
 - 테스트 없이 구현 완료 불가
 - 게이트 위반 시 이전 단계로 복귀
-- 세션 파일은 `~/.claude/claude-devkit/sessions/`에 저장
+
+## 참조 문서
+
+| 문서 | 내용 |
+|------|------|
+| [session.md](references/session.md) | 세션 디렉터리 구조, state.yaml 형식 |
+| [timeline.md](references/timeline.md) | 타임라인 이벤트 스키마 (JSONL) |
+| [knowledge.md](references/knowledge.md) | 프로젝트 지식 관리, /orchestrator learn |
+| [contracts.md](references/contracts.md) | Contract 파일 형식 |
+| [gate-rules.md](references/gate-rules.md) | 게이트 규칙 상세 |
+| [phases.md](references/phases.md) | 페이즈별 상세 절차 |
+| [agent-contexts.md](references/agent-contexts.md) | 에이전트별 컨텍스트 주입 가이드 |

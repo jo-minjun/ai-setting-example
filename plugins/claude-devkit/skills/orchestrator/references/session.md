@@ -1,258 +1,297 @@
 # 세션 컨텍스트 관리
 
-오케스트레이터는 세션 파일을 통해 작업 진행 상태와 Contract를 관리한다.
+오케스트레이터는 세션 디렉터리를 통해 작업 진행 상태와 Contract를 관리한다.
 
-## 세션 파일 위치
+## 세션 디렉터리 구조
 
+```
+~/.claude/claude-devkit/sessions/{projectName}-{projectDirectoryHash}-{datetime}/
+├── state.yaml           # 현재 상태 (자주 갱신)
+├── timeline.jsonl       # 이벤트 로그 (append only)
+├── contracts/           # Contract 파일들
+│   ├── T1.preliminary-design-brief.yaml
+│   ├── T1.design-brief.yaml
+│   ├── T1.design-contract.yaml
+│   ├── T1.test-contract.yaml
+│   ├── T1.test-result.yaml
+│   └── ...
+└── explored/            # 탐색 결과 캐시
+    └── files.yaml
+```
+
+### 디렉터리 이름 규칙
+
+| 요소 | 설명 | 예시 |
+|------|------|------|
+| projectName | 프로젝트 디렉터리 이름 | `my-project` |
+| projectDirectoryHash | 프로젝트 경로의 SHA-256 해시 앞 6자리 | `a1b2c3` |
+| datetime | 세션 생성 시간 (분까지) | `20240115T1030` |
+
+**projectDirectoryHash 생성:**
+```bash
+echo -n "/Users/minjun/my-project" | sha256sum | cut -c1-6
+# 결과: a1b2c3
+```
+
+**예시:**
 ```
 ~/.claude/claude-devkit/sessions/
-└── {project-hash}.yaml    # 프로젝트별 세션 파일
+├── my-project-a1b2c3-20240115T1000/
+├── my-project-a1b2c3-20240118T1400/
+└── api-server-d4e5f6-20240116T0900/
 ```
 
-`project-hash`는 프로젝트 경로의 해시값 (충돌 방지).
+### 세션 정책
 
-## 세션 파일 구조
+| 명령 | 동작 |
+|------|------|
+| `/orchestrator` | 항상 새 세션 생성 |
+| `/orchestrator resume` | 기존 세션 목록에서 선택 |
+
+- 프로젝트 지식은 별도 관리: `~/.claude/claude-devkit/knowledge/`
+
+---
+
+## 태스크 ID 규칙
+
+| 유형 | 형식 | 예시 |
+|------|------|------|
+| 작업 (Task) | `Tn` | T1, T2, T3 |
+| 하위 작업 (Subtask) | `STn` | ST1, ST2, ST3 |
+
+---
+
+## state.yaml
+
+현재 상태만 저장. 자주 갱신되는 파일.
 
 ```yaml
-# ~/.claude/claude-devkit/sessions/{hash}.yaml
-session:
-  # 메타데이터
-  project_path: /Users/.../my-project
-  reference_path: /Users/.../reference-project  # 참고 프로젝트 (있는 경우)
-  created_at: 2024-01-15T10:00:00
-  updated_at: 2024-01-15T14:30:00
+version: 1
+project_path: /Users/.../my-project
+reference_path: null
+created_at: 2024-01-15T10:00:00
+updated_at: 2024-01-15T14:30:00
 
-  # 프로젝트 매니페스트 (Code Explore가 탐색)
-  project_manifest:
-    claude_md: /Users/.../my-project/CLAUDE.md  # 없으면 null
-    agents_md: /Users/.../my-project/docs/AGENTS.md  # 없으면 null
+# 현재 진행 상태
+current:
+  task: T2
+  subtask: ST3
+  phase: implementation
 
-  # 현재 진행 상태
-  current_task: M2
-  current_phase: implementation  # parallel_discovery | merge | design | test_first | implementation | verification | complete
+# 작업 목록
+tasks:
+  - id: T1
+    name: Repository 인터페이스 생성
+    status: completed
+    subtasks:
+      - id: ST1
+        name: Store Repository 생성
+        status: completed
+      - id: ST2
+        name: Customer Repository 생성
+        status: completed
 
-  # 병렬 탐색 상태 (Parallel Discovery용)
-  parallel_discovery:
-    status: completed  # pending | running | completed
-    code_explore:
-      status: completed
-      started_at: 2024-01-15T10:00:00
-      completed_at: 2024-01-15T10:01:30
-    planner:
-      status: completed
-      started_at: 2024-01-15T10:00:00
-      completed_at: 2024-01-15T10:02:00
+  - id: T2
+    name: Service 레이어 구현
+    status: in_progress
+    subtasks:
+      - id: ST1
+        name: StoreService 구현
+        status: completed
+      - id: ST2
+        name: CustomerService 구현
+        status: completed
+      - id: ST3
+        name: Service 통합 테스트
+        status: in_progress
 
-  # 작업 목록
-  tasks:
-    - id: M1
-      name: Repository 인터페이스 생성
-      status: completed
-      completed_at: 2024-01-15T11:00:00
+  - id: T3
+    name: Controller 구현
+    status: pending
+    subtasks: []
 
-    - id: M2
-      name: Service 레이어 구현
-      status: in_progress
-      started_at: 2024-01-15T11:00:00
+# Contract 파일 참조
+contracts:
+  T1:
+    design_brief: contracts/T1.design-brief.yaml
+    design_contract: contracts/T1.design-contract.yaml
+    test_contract: contracts/T1.test-contract.yaml
+    test_result: contracts/T1.test-result.yaml
+  T2:
+    design_brief: contracts/T2.design-brief.yaml
+    design_contract: null
+    test_contract: null
+    test_result: null
 
-    - id: M3
-      name: Controller 구현
-      status: pending
+# 프로젝트 매니페스트 참조 (복수 가능)
+manifest:
+  - /Users/.../my-project/CLAUDE.md
+  - /Users/.../my-project/docs/AGENTS.md
 
-  # 탐색 결과 캐시
-  explored_files:
-    - path: src/main/.../Store.java
-      summary: "상점 엔티티. 필드: id, name. 메서드: create, update"
-      explored_at: M1
+# 게이트 상태
+gates:
+  GATE-1: pending
+  GATE-2: pending
+  GATE-3: pending
+  GATE-4: pending
 
-    - path: src/main/.../Customer.java
-      summary: "고객 엔티티. 필드: id, email 등"
-      explored_at: M1
-
-  # Contract 저장소
-  contracts:
-    # 잠정 Design Brief (Planner가 코드탐색 없이 생성)
-    preliminary_design_brief: |
-      task_name: Service 레이어 구현
-      objective: Store, Customer 서비스 구현
-      assumptions:
-        - "서비스 클래스는 src/main/service에 위치할 것"
-        - "Repository 인터페이스가 이미 존재할 것"
-      completion_criteria:
-        - StoreService CRUD
-      scope_in:
-        - Service 클래스 구현 (추정)
-      scope_out:
-        - Controller 구현
-
-    # 최종 Design Brief (Merge 후 생성)
-    design_brief: |
-      task_name: Service 레이어 구현
-      objective: Store, Customer 서비스 구현
-      completion_criteria:
-        - StoreService CRUD
-        - CustomerService CRUD
-      scope_in:
-        - src/main/java/com/example/service/StoreService.java
-      scope_out:
-        - Controller 구현
-
-    design_contract: |
-      task: Service 레이어 구현
-      invariants:
-        - Service는 Repository만 의존
-        - Entity에 비즈니스 로직 위임
-      interfaces:
-        - name: StoreService
-          methods: [list, create, get, update]
-
-    test_contract: |
-      task: Service 레이어 구현
-      test_cases:
-        - name: createStore_정상_생성
-          target: StoreService.create
-      test_file_path: src/test/.../StoreServiceTest.java
-
-    test_result: null  # 테스트 실행 후 채워짐
+# 병렬 탐색 상태
+parallel_discovery:
+  status: completed
+  code_explore:
+    status: completed
+    completed_at: 2024-01-15T10:01:30
+  planner:
+    status: completed
+    completed_at: 2024-01-15T10:02:00
 ```
+
+### 고정 값 (Enum)
+
+**phase:**
+- `parallel_discovery`
+- `merge`
+- `design`
+- `test_first`
+- `implementation`
+- `verification`
+- `complete`
+
+**task/subtask status:**
+- `pending`
+- `in_progress`
+- `completed`
+
+**gate status:**
+- `pending`
+- `passed`
+- `failed`
+
+**parallel_discovery status:**
+- `pending`
+- `running`
+- `completed`
+
+---
+
+## explored/files.yaml
+
+Code Explore 에이전트가 탐색한 파일 캐시.
+
+```yaml
+version: 1
+explored_at: 2024-01-15T10:01:30
+
+files:
+  - path: src/main/java/com/example/store/Store.java
+    summary: "상점 엔티티. 필드: id, name, address. 메서드: create, update"
+    line_count: 45
+
+  - path: src/main/java/com/example/customer/Customer.java
+    summary: "고객 엔티티. 필드: id, email, name. Store FK 참조"
+    line_count: 38
+
+  - path: src/main/java/com/example/store/StoreRepository.java
+    summary: "Store JPA Repository 인터페이스"
+    line_count: 12
+
+structure:
+  src/main/java/com/example:
+    - store/
+    - customer/
+    - common/
+  src/test/java/com/example:
+    - store/
+    - customer/
+```
+
+---
 
 ## 세션 라이프사이클
 
-### 1. 세션 생성 (오케스트레이터 시작 시)
-
-```
-조건: 세션 파일이 없거나 24시간 이상 경과
-동작:
-  1. 새 세션 파일 생성
-  2. 프로젝트 경로, 참고 프로젝트 설정
-  3. current_phase = "parallel_discovery"
-  4. Parallel Discovery 페이즈 실행
-```
-
-### 1.5. Parallel Discovery (병렬 탐색)
+### 1. 새 세션 생성 (`/orchestrator`)
 
 ```
 동작:
-  1. parallel_discovery.status = "running"
-  2. 병렬로 두 Task 에이전트 호출:
-     - Code Explore: 프로젝트 구조 탐색
-     - Planner: 잠정 Design Brief 생성
-  3. 각 Task 완료 시 상태 업데이트:
-     - Code Explore 완료 → explored_files 저장
-     - Planner 완료 → preliminary_design_brief 저장
-  4. 두 Task 모두 완료 시:
-     - parallel_discovery.status = "completed"
-     - current_phase = "merge"
+  1. 디렉터리 생성: {projectName}-{projectDirectoryHash}-{datetime}
+  2. state.yaml 초기화
+  3. current.phase = "parallel_discovery"
+  4. timeline.jsonl에 session_start 기록
 ```
 
-### 1.6. Merge (결과 병합)
+### 1-1. 세션 재개 (`/orchestrator resume`)
 
 ```
 동작:
-  1. explored_files와 preliminary_design_brief 비교
-  2. assumptions 검증:
-     - 맞는 가정: scope_in 구체화 (실제 경로로 교체)
-     - 틀린 가정: 실제 구조에 맞게 수정
-  3. 최종 design_brief 생성 → contracts.design_brief
-  4. current_phase = "design"
-  5. 가정 50% 이상 불일치 시: Planner 재호출 (순차 모드)
+  1. 현재 프로젝트의 이전 세션 목록 표시
+  2. 사용자가 세션 선택
+  3. 선택한 세션의 state.yaml 로드
+  4. 중단된 phase부터 재개
 ```
 
-### 2. 세션 업데이트 (매 페이즈 완료 후)
+```
+/orchestrator resume
+
+┌─────────────────────────────────────────────────────────┐
+│ 이전 세션 목록 (my-project)                             │
+├─────────────────────────────────────────────────────────┤
+│ [1] 20240115T1400 - T2 Service (implementation) 🔄      │
+│ [2] 20240115T1000 - T1 Repository (complete) ✅         │
+│ [3] 20240114T0900 - T3 Controller (test_first) ⏳       │
+│                                                         │
+│ 번호를 선택하세요:                                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 2. 페이즈 전환
 
 ```
 동작:
-  1. current_phase 업데이트
-  2. 해당 Contract 저장
-  3. updated_at 갱신
+  1. state.yaml의 current.phase 업데이트
+  2. timeline.jsonl에 phase_enter/phase_exit 기록
+  3. 해당 Contract 파일 생성 (contracts/ 디렉터리)
+  4. state.yaml의 contracts 참조 업데이트
 ```
 
-### 3. 작업 완료 시
+### 3. 작업 완료
 
 ```
 동작:
   1. 현재 작업 status: completed
   2. 다음 작업 status: in_progress
-  3. contracts 초기화 (다음 작업용)
+  3. timeline.jsonl에 task_complete 기록
+  4. current.task 업데이트
 ```
 
-### 4. 세션 종료 조건
+### 4. 세션 종료
 
 ```
-- 모든 작업 완료
-- 사용자 명시적 종료 (/orchestrator stop)
-- 24시간 비활성
+조건:
+  - 모든 작업 완료
+  - 사용자 명시적 종료 (/orchestrator stop)
+  - 24시간 비활성
+
+동작:
+  1. timeline.jsonl에 session_end 기록
+  2. 세션 디렉터리 유지 (분석용)
 ```
 
-## 세션 활용
-
-### 서브에이전트 호출 시 컨텍스트 주입
-
-오케스트레이터는 서브에이전트 호출 전 세션 파일에서 필요한 정보를 추출하여 주입한다.
-
-```yaml
-# 모든 에이전트 공통 주입
-injected_context:
-  project: "{{session.project_path}}"
-  reference: "{{session.reference_path}}"
-  task: "{{session.current_task}}"
-  project_manifest: "{{session.project_manifest}}"  # CLAUDE.md, AGENTS.md 경로
-  explored_files: "{{session.explored_files | summary}}"
-
-# Architect, Implementer, QA Engineer 추가 주입
-  design_contract: "{{session.contracts.design_contract}}"
-  test_contract: "{{session.contracts.test_contract}}"
-```
-
-**project_manifest 활용:**
-- 에이전트들은 `project_manifest.claude_md` 경로로 프로젝트 규칙 파일을 직접 읽을 수 있음
-- CLAUDE.md가 없으면 null이므로 존재 여부 확인 후 사용
-
-### 탐색 결과 재사용
-
-```yaml
-# 이미 탐색된 파일은 요약만 제공
-explored_files_summary: |
-  [이미 분석된 파일]
-  - Store.java: 상점 엔티티. create, update 메서드 보유
-  - Customer.java: 고객 엔티티. FK로 Store 참조
-
-  상세 내용 필요 시 Read 도구로 직접 조회하세요.
-```
+---
 
 ## 명령어
 
-### 세션 상태 확인
+| 명령 | 설명 |
+|------|------|
+| `/orchestrator status` | 현재 세션 상태 출력 |
+| `/orchestrator resume` | 중단된 세션 재개 |
+| `/orchestrator reset` | 세션 초기화 |
+| `/orchestrator stop` | 세션 종료 |
 
-```
-/orchestrator status
-```
+---
 
-출력:
-```
-╔══════════════════════════════════════════════════════════╗
-║  Orchestrator Session                                     ║
-║  Project: my-project                                      ║
-╠══════════════════════════════════════════════════════════╣
-║                                                           ║
-║  M1 Repository    ✅ completed                            ║
-║  M2 Service       🔄 in_progress  ← current               ║
-║  M3 Controller    ⏳ pending                              ║
-║                                                           ║
-║  Phase: Implementation                                    ║
-║  Gate: GATE-1 ✅ GATE-3 ⏳ GATE-4 ⏳                       ║
-║                                                           ║
-╚══════════════════════════════════════════════════════════╝
-```
+## 관련 문서
 
-### 세션 초기화
-
-```
-/orchestrator reset
-```
-
-### 세션 재개
-
-```
-/orchestrator resume
-```
+- [timeline.md](timeline.md) - 타임라인 이벤트 스키마
+- [contracts.md](contracts.md) - Contract 파일 형식
+- [knowledge.md](knowledge.md) - 프로젝트 지식 관리
+- [agent-contexts.md](agent-contexts.md) - 에이전트별 컨텍스트 주입

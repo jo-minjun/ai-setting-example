@@ -4,7 +4,16 @@
 
 ## 세션 기반 컨텍스트 주입
 
-오케스트레이터는 `~/.claude/claude-devkit/sessions/{hash}.yaml` 에서 컨텍스트를 읽어 서브에이전트 프롬프트에 주입한다.
+오케스트레이터는 세션 디렉터리에서 컨텍스트를 읽어 서브에이전트 프롬프트에 주입한다.
+
+```
+~/.claude/claude-devkit/sessions/{projectName}-{projectDirectoryHash}-{datetime}/
+├── state.yaml           # 현재 상태
+├── contracts/           # Contract 파일들
+└── explored/            # 탐색 결과
+```
+
+> 세션 디렉터리 구조 상세: [session.md](session.md)
 
 ### 공통 헤더 (모든 에이전트)
 
@@ -377,16 +386,18 @@ Test Result Report → `session.contracts.test_result`에 저장
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         Session File                              │
-│  ~/.claude/claude-devkit/sessions/{hash}.yaml                     │
+│  Session Directory                                                │
+│  ~/.claude/claude-devkit/sessions/{projectName}-{hash}-{datetime}/│
+│  ├── state.yaml, contracts/, explored/                           │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌─────────────────┐     ┌─────────────────────┐                 │
 │  │  [Code Explore] │     │     [Planner]        │   ◀── 병렬 실행 │
 │  │       │         │     │         │            │                 │
 │  │       ▼         │     │         ▼            │                 │
-│  │ explored_files  │     │ preliminary_design   │                 │
-│  │     저장        │     │ _brief 저장          │                 │
+│  │ explored/       │     │ contracts/           │                 │
+│  │ files.yaml 저장 │     │ Tn.preliminary-      │                 │
+│  │                 │     │ design-brief.yaml    │                 │
 │  └────────┬────────┘     └──────────┬───────────┘                 │
 │           │                         │                             │
 │           └────────────┬────────────┘                             │
@@ -395,17 +406,18 @@ Test Result Report → `session.contracts.test_result`에 저장
 │              │     [Merge]     │  ◀── 오케스트레이터 직접 수행   │
 │              │        │        │                                  │
 │              │        ▼        │                                  │
-│              │  design_brief   │                                  │
-│              │      저장       │                                  │
+│              │ contracts/      │                                  │
+│              │ Tn.design-      │                                  │
+│              │ brief.yaml 저장 │                                  │
 │              └────────┬────────┘                                  │
 │                       │                                           │
 │                       │ design_brief 주입                         │
 │                       ▼                                           │
-│              [Architect] ────▶ design_contract 저장              │
+│              [Architect] ────▶ Tn.design-contract.yaml 저장      │
 │                       │                                           │
 │                       │ design_contract 주입                      │
 │                       ▼                                           │
-│              [QA Engineer] ──▶ test_contract 저장                │
+│              [QA Engineer] ──▶ Tn.test-contract.yaml 저장        │
 │                       │                                           │
 │                       │ design_contract + test_contract 주입      │
 │                       ▼                                           │
@@ -413,7 +425,7 @@ Test Result Report → `session.contracts.test_result`에 저장
 │                       │                                           │
 │                       │ test_contract 주입                        │
 │                       ▼                                           │
-│              [QA Engineer] ──▶ test_result 저장                  │
+│              [QA Engineer] ──▶ Tn.test-result.yaml 저장          │
 │                                                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```

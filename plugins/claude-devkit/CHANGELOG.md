@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-13
+
+### Added
+
+- **타임라인 시스템**: 오케스트레이션 전체 흐름을 시간순으로 추적하는 새 참조 문서
+  - 페이즈별 시작/종료 타임스탬프
+  - 에이전트 호출 이력 및 소요 시간
+  - Contract 생성/검증 이벤트
+
+- **Knowledge 관리**: 세션 중 발견한 정보를 체계적으로 관리하는 새 참조 문서
+  - 프로젝트 구조, 코드 패턴, 의존성 정보 저장
+  - 에이전트 간 지식 공유 메커니즘
+  - 세션 재개 시 컨텍스트 복원 지원
+
+### Changed
+
+- **Orchestrator SKILL.md 구조 개선**: 207줄 정리로 가독성 향상
+- **Contract 문서 확장**: 453줄→더 상세한 체인 설명 및 검증 규칙
+- **Session 문서 개편**: 에이전트 컨텍스트 주입 방식 명확화
+- **Agent Context 템플릿 정리**: 공통 헤더 간소화
+
+### Removed
+
+- **플러그인 내부 README.md 삭제**: 루트 README.md로 통합
+
 ## [1.3.0] - 2026-01-13
 
 ### Added
