@@ -17,6 +17,7 @@ description: TDD 기반 개발 오케스트레이터. 기능 추가, 기능 변�
 4. **게이트 통제**: 조건 미충족 시 다음 단계 차단
 5. **완료까지 자동 진행**: 모든 Task가 완료될 때까지 멈추지 않음
 6. **파일 기반**: 세션 상태와 Contract는 **반드시** 파일 시스템에 저장
+7. **스키마 준수**: 모든 세션/Contract 파일은 [storage.md](references/storage.md)에 정의된 스키마를 **반드시** 따름
 
 ## 필수 파일 생성 규칙
 
@@ -394,7 +395,7 @@ Contract는 파일로 저장되며, 오케스트레이터가 Read로 조회하�
 1. 세션 파일 확인: Read .claude/orchestrator/sessions/{hash}/session.json
 2. 새 세션이면:
    - session.json 생성
-   - state.json 생성 (version: 2)
+   - state.json 생성 (version: 1, global_phase: "global_discovery")
    - contracts/{requestId}/ 디렉토리 생성
 
 3. 병렬로 두 Agent 호출:
@@ -411,7 +412,10 @@ Contract는 파일로 저장되며, 오케스트레이터가 Read로 조회하�
    - Write: contracts/{requestId}/explored.yaml ← 반드시 생성
    - Write: contracts/{requestId}/task-breakdown.yaml ← 반드시 생성
 
-5. state.json 업데이트 (request.status=active, task_order 설정)
+5. state.json 업데이트:
+   - request.global_phase = "task_loop"
+   - request.status = "active"
+   - task_order 설정
 6. 첫 번째 Task 시작
 ```
 

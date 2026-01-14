@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-01-14
+
+### Added
+
+- **스키마 준수 원칙**: 모든 세션/Contract 파일이 storage.md에 정의된 스키마를 반드시 따르도록 강화
+  - 정의되지 않은 필드 추가 금지
+  - 정의된 필드의 타입/구조 변경 금지
+  - 임의의 최상위 객체 생성 금지
+
+- **global_phase 업데이트 시점 명시**: state.json의 global_phase 전환 시점을 명확히 문서화
+  - 세션 시작: `global_discovery`
+  - Merge 완료: `task_loop`
+  - Request 완료: `complete`
+
+### Changed
+
+- **storage.md**: 스키마 준수 원칙 섹션 추가 (파일 상단)
+- **SKILL.md**: 핵심 원칙 7번으로 "스키마 준수" 추가, 세션 시작/Global Discovery 후 상태 업데이트 명시
+- **session.md**: state.json 초기값과 Merge 완료 후 상태 예시 분리, global_phase 업데이트 시점 표 추가
+- **phases.md**: Merge 페이즈 출력에 state.json 업데이트 내용 추가
+
+### Fixed
+
+- 오케스트레이터가 state.json에 문서에 정의되지 않은 `global` 객체를 생성하는 문제 수정
+- Global Discovery 후 global_phase가 갱신되지 않는 문제 수정
+
 ## [1.5.1] - 2026-01-14
 
 ### Added

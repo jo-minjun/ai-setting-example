@@ -74,7 +74,23 @@ claude-mem은 자동 캡처된 이력 검색에만 보조적으로 사용한다.
 }
 ```
 
-**state.json 초기값 (version 2):**
+**state.json 초기값 (세션 시작 직후):**
+```json
+{
+  "version": 2,
+  "request": {
+    "id": "R1",
+    "original_request": "[사용자 요청]",
+    "status": "active",
+    "current_task": null,
+    "global_phase": "global_discovery"
+  },
+  "tasks": {},
+  "task_order": []
+}
+```
+
+**state.json (Merge 완료 후):**
 ```json
 {
   "version": 2,
@@ -104,6 +120,13 @@ claude-mem은 자동 캡처된 이력 검색에만 보조적으로 사용한다.
   "task_order": ["T1", "T2"]
 }
 ```
+
+**global_phase 업데이트 시점:**
+| 시점 | global_phase 값 |
+|------|----------------|
+| 세션 시작 | `global_discovery` |
+| Merge 완료 | `task_loop` |
+| Request 완료 | `complete` |
 
 ---
 

@@ -5,6 +5,22 @@ claude-mem은 자동 캡처된 컨텍스트 검색에만 사용한다.
 
 ---
 
+## 스키마 준수 원칙 (필수)
+
+**중요**: 아래 파일들은 반드시 이 문서에 정의된 스키마 구조만 사용해야 한다.
+
+- session.json, state.json, knowledge.yaml
+- 모든 Contract YAML 파일 (explored.yaml, task-breakdown.yaml, design-*.yaml, test-*.yaml)
+
+**금지 사항**:
+- 문서에 정의되지 않은 필드 추가 금지
+- 정의된 필드의 타입/구조 변경 금지
+- 임의의 최상위 객체 생성 금지
+
+**위반 시**: 파일 검증 실패로 처리하고 재생성 요청
+
+---
+
 ## 저장소 위치
 
 ```

@@ -160,7 +160,12 @@ Merge
    - 의존성 반영
 
 ### 출력
-각 Task별 `contracts/{requestId}/{taskId}/design-brief.yaml`
+- 각 Task별 `contracts/{requestId}/{taskId}/design-brief.yaml`
+- **state.json 업데이트**:
+  - `request.global_phase = "task_loop"`
+  - `tasks` 객체 초기화 (각 Task/Subtask 상태)
+  - `task_order` 설정
+  - `current_task = task_order[0]`
 
 ### 다음 페이즈
 Task Loop (Task Design)
