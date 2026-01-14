@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-14
+
+### Added
+
+- **claude-mem 트리거 조건 명확화**: 에이전트별 검색 시점과 쿼리 패턴 정의
+  - Architect: 첫 세션에서 설계 결정 검색
+  - Implementer: 재시도 시 (retry_count > 0) 실패 패턴 검색
+  - QA Engineer: 테스트 2회 이상 실패 시 패턴 검색
+  - Fallback: claude-mem 미설치 시 경고 메시지 출력 후 파일 기반 지식만 사용
+
+- **knowledge.yaml 자동 업데이트**: 수동 `/orchestrator learn` 없이 자동 축적
+  - Task 완료 시: design-contract에서 decisions 추출
+  - Subtask 재시도 후 성공 시: 실패 원인을 pitfalls에 추가
+  - 세션 종료 시: 전체 Contract 스캔 후 누락된 지식 병합
+
+- **에이전트 프롬프트에 mem_context 섹션 추가**: Architect, Implementer 템플릿에 claude-mem 검색 결과 주입 영역 추가
+
+### Changed
+
+- **README.md 전면 재구성**: 개념 설명 → 사용법 위주로 변경
+  - 빠른 시작 섹션 추가
+  - 에이전트/스킬별 트리거 예시 명시
+  - 알아두면 좋은 개념 섹션 간소화
+
+- **SKILL.md에 claude-mem 검색 타이밍 다이어그램 추가**: 오케스트레이터가 에이전트 호출 전 검색하는 흐름 시각화
+
+- **session.md 지식 축적 정책 변경**: "(선택) 지식 축적" → "자동 지식 축적"으로 변경
+
+- **참조 문서 구조 개편**: agent-prompts.md, context-injection.md 분리 및 상세화
+
+### Removed
+
+- **agent-contexts.md 삭제**: context-injection.md와 agent-prompts.md로 분리
+- **timeline.md 삭제**: session.md와 storage.md로 통합
+
 ## [1.4.0] - 2026-01-13
 
 ### Added

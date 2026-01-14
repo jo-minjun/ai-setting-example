@@ -1,57 +1,90 @@
 # 페이즈 상세
 
 오케스트레이션 루프의 각 페이즈별 상세 절차.
+3-tier 계층 구조 (Request → Task → Subtask)를 기반으로 한다.
+
+---
+
+## 3-tier 계층 모델
+
+```
+Request (요청) - R1
+  ├── Task (작업) - T1
+  │   ├── Subtask (하위작업) - T1-S1 → [Mini TDD 루프]
+  │   ├── Subtask (하위작업) - T1-S2 → [Mini TDD 루프]
+  │   └── Subtask (하위작업) - T1-S3 → [Mini TDD 루프]
+  │
+  └── Task (작업) - T2
+      ├── Subtask - T2-S1 → [Mini TDD 루프]
+      └── Subtask - T2-S2 → [Mini TDD 루프]
+```
+
+| 계층 | 식별자 | 역할 | TDD 적용 |
+|------|--------|------|----------|
+| **Request** | R1 | 사용자 원본 요청 | - |
+| **Task** | T1, T2 | 논리적 작업 단위 | Design |
+| **Subtask** | T1-S1 | TDD 루프 적용 단위 | Mini TDD Loop |
 
 ---
 
 ## 페이즈 흐름도
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PARALLEL DISCOVERY                            │
-├────────────────────────┬────────────────────────────────────────┤
-│    [Code Explore]      │           [Planner]                     │
-│          │             │               │                         │
-│          ▼             │               ▼                         │
-│    explored_files      │    preliminary_design_brief             │
-└────────────┬───────────┴───────────────┬────────────────────────┘
-             │                           │
-             └─────────────┬─────────────┘
-                           ▼
-                       [Merge] ─── design_brief ───→ [Design]
-                           ↑                              │
-                           │                       Design Contract
-                           │                              ↓
-                           │                        [Test First]
-                           │                              │
-                           │ GATE-3,4 위반           Test Contract
-                           │                         + 테스트 코드
-                           │                              ↓
-                           └─────────────────────── [Implementation]
-                                                          │
-                                                    GATE-1 통과 필수
-                                                          │
-                                                     구현 코드
-                                                          ↓
-                                                   [Verification]
-                                                          │
-                                                    GATE-2 통과 필수
-                                                          │
-                                      ┌───────────────────┴───────────────┐
-                                      │                                   │
-                                테스트 실패                          테스트 통과
-                                      │                                   │
-                                      ↓                                   ↓
-                               [Implementation]                     [Complete]
-                                또는 [Design]
+┌────────────────────────────────────────────────────┐
+│            GLOBAL DISCOVERY (한 번만)              │
+│  ┌─────────────────┐    ┌─────────────────┐       │
+│  │  [Code Explore] │    │    [Planner]    │       │
+│  │        │        │    │        │        │       │
+│  │        ▼        │    │        ▼        │       │
+│  │  explored.yaml  │    │ task-breakdown  │       │
+│  └────────┬────────┘    └────────┬────────┘       │
+│           └──────────┬───────────┘                │
+│                      ▼                            │
+│                  [Merge]                          │
+│                      │                            │
+│              design-brief (per Task)              │
+└──────────────────────┬───────────────────────────┘
+                       ▼
+         ┌───────────────────────────────┐
+         │  For each Task (순차)          │
+         │  ┌─────────────────────────┐  │
+         │  │ [Task Design]           │  │
+         │  │ Architect → design-     │  │
+         │  │ contract.yaml           │  │
+         │  └───────────┬─────────────┘  │
+         │              ▼                 │
+         │  ┌─────────────────────────┐  │
+         │  │ For each Subtask        │  │
+         │  │  ┌───────────────────┐  │  │
+         │  │  │ [Mini TDD Loop]   │  │  │
+         │  │  │                   │  │  │
+         │  │  │ Test First        │  │  │
+         │  │  │      ↓            │  │  │
+         │  │  │ Implementation    │  │  │
+         │  │  │      ↓            │  │  │
+         │  │  │ Verification      │  │  │
+         │  │  │      │            │  │  │
+         │  │  │   ┌──┴──┐         │  │  │
+         │  │  │ 실패   성공        │  │  │
+         │  │  │   ↓     ↓         │  │  │
+         │  │  │ 재시도  다음 S     │  │  │
+         │  │  └───────────────────┘  │  │
+         │  └─────────────────────────┘  │
+         │              ▼                 │
+         │        Task Complete           │
+         │         다음 Task              │
+         └───────────────┬───────────────┘
+                         ▼
+                Request Complete
 ```
 
 ---
 
-## 0. Parallel Discovery 페이즈
+## 0. Global Discovery 페이즈 (Request 레벨)
 
 ### 개요
-Code Explore와 Planner를 병렬로 실행하여 초기 탐색 시간을 단축한다.
+Code Explore와 Planner를 병렬로 실행하여 프로젝트 탐색과 Task 분해를 동시에 수행한다.
+**한 번만** 실행되며, 이후 Task Loop로 진입한다.
 
 ### 구성 요소
 
@@ -69,7 +102,7 @@ Code Explore와 Planner를 병렬로 실행하여 초기 탐색 시간을 단축
 3. 주요 소스 파일 요약
 
 **출력**
-explored_files (프로젝트 구조 및 주요 파일 요약)
+`contracts/{requestId}/explored.yaml`
 
 #### 0b. Planner (Task B)
 
@@ -81,12 +114,12 @@ explored_files (프로젝트 구조 및 주요 파일 요약)
 
 **절차**
 1. 사용자 요청 분석
-2. 코드 탐색 결과 없이 잠정 계획 수립
+2. 코드 탐색 결과 없이 Task/Subtask로 분해
 3. 불확실한 부분은 assumptions로 명시
-4. preliminary_design_brief 생성
+4. task-breakdown 생성
 
 **출력**
-preliminary_design_brief (assumptions 필드 포함)
+`contracts/{requestId}/task-breakdown.yaml`
 
 **특이사항**
 - 코드 구조를 모르므로 가정(assumptions)을 명시적으로 기록
@@ -102,57 +135,49 @@ Merge
 
 ---
 
-## 1. Merge 페이즈
+## 1. Merge 페이즈 (Request 레벨)
 
 ### 담당
 오케스트레이터 (서브에이전트 아님)
 
 ### 입력
-- explored_files (Code Explore 결과)
-- preliminary_design_brief (Planner 결과)
+- `explored.yaml` (Code Explore 결과)
+- `task-breakdown.yaml` (Planner 결과)
 
 ### 절차
 
 1. **가정 검증**
-   - preliminary_design_brief의 assumptions를 explored_files로 검증
+   - task-breakdown의 assumptions를 explored.yaml로 검증
    - 각 가정이 맞는지/틀린지 판정
 
-2. **스코프 조정**
-   - scope_in의 파일/컴포넌트가 실제로 존재하는지 확인
-   - 존재하지 않으면: 유사한 파일이 있으면 경로 수정, 새로 만들어야 하면 유지
-   - 예상치 못한 관련 파일 발견 시 scope_in 추가
+2. **Task별 Design Brief 생성**
+   - task-breakdown의 각 Task에 대해 design-brief 생성
+   - explored.yaml의 file_refs 정보 반영
+   - scope_in, scope_out 구체화
 
-3. **의존성 보완**
-   - explored_files에서 발견된 의존성 관계 반영
-   - 누락된 의존성 추가
-
-4. **완료 조건 보강**
-   - 코드 구조 기반으로 완료 조건 구체화
-   - 테스트 가능한 형태로 조정
-
-5. **최종 design_brief 생성**
-   - assumptions 필드 제거 (검증 완료)
-   - 조정된 내용으로 최종 Contract 생성
+3. **Subtask 순서 확정**
+   - 각 Task 내 Subtask 실행 순서 결정
+   - 의존성 반영
 
 ### 출력
-design_brief (최종)
+각 Task별 `contracts/{requestId}/{taskId}/design-brief.yaml`
 
 ### 다음 페이즈
-Design
+Task Loop (Task Design)
 
 ### 검증 실패 시
-- 가정이 대부분 틀린 경우: Planner 재호출 (explored_files 주입, 순차 모드)
+- 가정이 대부분 틀린 경우: Planner 재호출 (explored.yaml 주입, 순차 모드)
 - 사소한 조정만 필요한 경우: 오케스트레이터가 직접 수정
 
 ---
 
-## 2. Design 페이즈
+## 2. Task Design 페이즈 (Task 레벨)
 
 ### 담당 에이전트
 Architect
 
 ### 입력
-- Design Brief
+- `contracts/{requestId}/{taskId}/design-brief.yaml`
 - 프로젝트 아키텍처 패턴 (DDD 레이어 등)
 - 기존 인터페이스/타입 정의
 
@@ -165,122 +190,141 @@ Architect
 6. Design Contract 생성
 
 ### 출력
-Design Contract
+`contracts/{requestId}/{taskId}/design-contract.yaml`
 
 ### 다음 페이즈
-Test First
+Subtask Loop (Mini TDD Loop)
 
 ### 실패 조건
 - 기존 아키텍처와 충돌 → Design Brief 수정 필요 (Merge 복귀)
 
 ---
 
-## 3. Test First 페이즈
+## 3. Mini TDD Loop (Subtask 레벨)
 
-### 담당 에이전트
+각 Subtask에 대해 Test First → Implementation → Verification을 순환한다.
+
+### 3a. Test First 페이즈
+
+#### 담당 에이전트
 QA Engineer
 
-### 입력
-- Design Contract
+#### 입력
+- `contracts/{requestId}/{taskId}/design-contract.yaml`
 - 프로젝트 테스트 프레임워크 (JUnit 5 등)
 - 기존 테스트 패턴
+- 현재 Subtask 정보 (state.json의 current_subtask)
 
-### 절차
+#### 절차
 1. Design Contract의 인터페이스별 테스트 케이스 설계
 2. Given-When-Then 형식으로 명세
 3. 카테고리 분류 (happy_path, error_case, edge_case)
 4. 테스트 코드 작성 (Red 상태 - 컴파일만 되고 실패)
 5. Test Contract 생성
 
-### 출력
-- Test Contract
+#### 출력
+- `contracts/{requestId}/{taskId}/{subtaskId}/test-contract.yaml`
 - 테스트 코드 파일
 
-### 다음 페이즈
+#### 다음 페이즈
 Implementation (GATE-1 통과 필수)
 
-### 게이트 검증
+#### 게이트 검증
 **GATE-1**: Test Contract와 테스트 코드가 존재해야 함
 
 ---
 
-## 4. Implementation 페이즈
+### 3b. Implementation 페이즈
 
-### 담당 에이전트
+#### 담당 에이전트
 Implementer
 
-### 입력
-- Design Contract (불변 조건)
-- Test Contract (통과해야 할 테스트)
+#### 입력
+- `contracts/{requestId}/{taskId}/design-contract.yaml` (불변 조건)
+- `contracts/{requestId}/{taskId}/{subtaskId}/test-contract.yaml` (통과해야 할 테스트)
 - 테스트 코드 (전문)
 
-### 절차
+#### 절차
 1. 테스트 코드 분석
 2. 테스트 통과를 위한 최소 구현
 3. 설계 불변 조건 준수 확인
 4. 스코프 확장 금지 (scope_out 구현 금지)
 5. 빌드 성공 확인
 
-### 출력
+#### 출력
 구현 코드
 
-### 다음 페이즈
+#### 다음 페이즈
 Verification
 
-### 게이트 검증 (Verification 전)
+#### 게이트 검증 (Verification 전)
 - **GATE-3**: 스코프 변경 없음
 - **GATE-4**: 설계 불변 조건 유지
 
-### 주의사항
+#### 주의사항
 - 테스트가 요구하지 않는 기능 추가 금지
 - 불필요한 추상화 금지
 - 설계 위반 발견 시 즉시 중단하고 보고
 
 ---
 
-## 5. Verification 페이즈
+### 3c. Verification 페이즈
 
-### 담당 에이전트
+#### 담당 에이전트
 QA Engineer
 
-### 입력
+#### 입력
 - 구현된 코드
-- Test Contract
+- `contracts/{requestId}/{taskId}/{subtaskId}/test-contract.yaml`
 - 테스트 실행 명령
 
-### 절차
+#### 절차
 1. 테스트 실행 (`./gradlew test`)
 2. 결과 수집
 3. 실패 시 원인 분석 및 분류
-4. Test Result Report 생성
+4. Test Result 생성
 5. 다음 action 결정
 
-### 출력
-Test Result Report
+#### 출력
+`contracts/{requestId}/{taskId}/{subtaskId}/test-result.yaml`
 
-### 다음 페이즈 결정
+#### 다음 페이즈 결정
 
-| 결과 | action | 다음 페이즈 |
-|------|--------|------------|
-| 모든 테스트 통과 | COMPLETE | Complete |
-| 구현 오류 | RETRY_IMPLEMENTATION | Implementation |
-| 설계 위반 | RETRY_DESIGN | Design |
+| 결과 | action | 다음 |
+|------|--------|------|
+| 모든 테스트 통과 | complete | 다음 Subtask 또는 Task Complete |
+| 구현 오류 | retry_implementation | Implementation 재시도 |
+| 설계 위반 | retry_design | Task Design 복귀 |
 
-### 게이트 검증
+#### 게이트 검증
 **GATE-2**: 테스트 실행 결과가 존재해야 함
 
 ---
 
-## 6. Complete 페이즈
+## 4. Task Complete (Task 레벨)
 
 ### 조건
-- GATE-2 통과 (테스트 결과 존재)
-- 모든 테스트 통과
+- 해당 Task의 **모든 Subtask 완료**
+- 각 Subtask의 test-result.yaml이 "complete" 상태
 
 ### 절차
-1. 최종 상태 출력
-2. 작업 완료 선언
-3. (선택) Doc Writer 에이전트 호출하여 문서화
+1. Task 상태를 "completed"로 변경
+2. 다음 Task가 있으면 Task Design으로 진행
+3. 모든 Task 완료 시 Request Complete로 진행
+
+---
+
+## 5. Request Complete
+
+### 조건
+- **모든 Task 완료**
+- 각 Task의 모든 Subtask 테스트 통과
+
+### 절차
+1. Request 상태를 "completed"로 변경
+2. 최종 상태 출력
+3. 작업 완료 선언
+4. (선택) Doc Writer 에이전트 호출하여 문서화
 
 ### 출력
 작업 완료 리포트
@@ -289,12 +333,33 @@ Test Result Report
 
 ## 페이즈 전환 요약
 
+### Request 레벨
+
 | 현재 페이즈 | 성공 시 | 실패 시 |
 |------------|--------|--------|
-| Parallel Discovery | → Merge | 재시도 |
-| Merge | → Design | → Planner 재호출 (순차 모드) |
-| Design | → Test First | → Merge |
+| Global Discovery | → Merge | 재시도 |
+| Merge | → Task Loop | → Planner 재호출 |
+| Request Complete | 종료 | - |
+
+### Task 레벨
+
+| 현재 페이즈 | 성공 시 | 실패 시 |
+|------------|--------|--------|
+| Task Design | → Subtask Loop | → Merge |
+| Task Complete | → 다음 Task 또는 Request Complete | - |
+
+### Subtask 레벨 (Mini TDD Loop)
+
+| 현재 페이즈 | 성공 시 | 실패 시 |
+|------------|--------|--------|
 | Test First | → Implementation | - |
-| Implementation | → Verification | → Merge (GATE-3) 또는 → Design (GATE-4) |
-| Verification | → Complete | → Implementation 또는 → Design |
-| Complete | 종료 | - |
+| Implementation | → Verification | → Merge (GATE-3) 또는 → Task Design (GATE-4) |
+| Verification | → 다음 Subtask 또는 Task Complete | → Implementation 또는 → Task Design |
+
+---
+
+## 관련 문서
+
+- [gate-rules.md](gate-rules.md) - 게이트 검증 규칙
+- [contracts.md](contracts.md) - Contract 형식
+- [storage.md](storage.md) - 저장소 구조

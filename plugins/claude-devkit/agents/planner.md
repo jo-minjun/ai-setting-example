@@ -170,3 +170,111 @@ model: sonnet
 - 불확실한 부분은 명시하고 확인 요청
 - XL 작업은 반드시 분할, M 초과 하위작업은 더 분해
 - 모든 작업/하위작업에 크기 라벨(XS/S/M/L/XL) 명시
+
+---
+
+## 오케스트레이터 연동 (선택적)
+
+오케스트레이터가 호출할 때 다음 컨텍스트와 출력 형식이 적용된다.
+
+### 호출 컨텍스트
+
+오케스트레이터는 **Global Discovery** 페이즈에서 Code Explore와 병렬로 Planner를 호출한다.
+이 때 **코드 탐색 결과 없이** 사용자 요청만으로 Task/Subtask 분해를 수행한다.
+
+| 입력 | 설명 |
+|------|------|
+| 프로젝트 경로 | 프로젝트 루트 경로 |
+| CLAUDE.md 내용 | 프로젝트 설정 (있는 경우) |
+| 사용자 원본 요청 | 구현할 기능 요청 |
+
+### 출력: Task Breakdown (Request 레벨)
+
+사용자 요청을 Task와 Subtask로 분해한다.
+오케스트레이터 호출 시 아래 YAML 형식으로 출력해야 한다.
+
+```yaml
+task_breakdown:
+  request_id: "R1"
+  original_request: "[사용자 원본 요청]"
+  objective: "[전체 달성 목표]"
+
+  tasks:
+    - id: "T1"
+      name: "[작업명]"
+      objective: "[작업 목표]"
+      subtasks:
+        - id: "T1-S1"
+          name: "[하위작업명]"
+          description: "[하위작업 설명]"
+        - id: "T1-S2"
+          name: "[하위작업명]"
+          description: "[하위작업 설명]"
+
+    - id: "T2"
+      name: "[작업명]"
+      objective: "[작업 목표]"
+      subtasks:
+        - id: "T2-S1"
+          name: "[하위작업명]"
+          description: "[하위작업 설명]"
+
+  # 필수: 코드 구조를 모르는 상태에서의 가정
+  assumptions:
+    - "[가정 1: 예상되는 파일 위치, 기존 구조 등]"
+    - "[가정 2: 사용 중인 프레임워크/라이브러리 추정]"
+
+  task_order: ["T1", "T2"]
+```
+
+### 필수 필드 설명
+
+| 필드 | 설명 | 예시 |
+|------|------|------|
+| request_id | 요청 식별자 | "R1" |
+| original_request | 사용자 원본 요청 | "XX컨트롤러 구현해줘" |
+| objective | 전체 달성 목표 | "XX 기능 전체 구현" |
+| tasks | Task 목록 | (아래 참조) |
+| tasks[].id | Task 식별자 | "T1", "T2" |
+| tasks[].name | Task 이름 | "a API 구현" |
+| tasks[].subtasks | Subtask 목록 | (아래 참조) |
+| tasks[].subtasks[].id | Subtask 식별자 | "T1-S1", "T1-S2" |
+| **assumptions** | 코드 구조에 대한 가정 **(필수)** | "인증 코드는 auth/ 디렉토리에 있을 것" |
+| task_order | Task 실행 순서 | ["T1", "T2"] |
+
+### 3-tier 계층 구조
+
+```
+Request (요청) - R1
+  ├── Task (작업) - T1
+  │   ├── Subtask (하위작업) - T1-S1 → [Mini TDD 루프]
+  │   ├── Subtask (하위작업) - T1-S2 → [Mini TDD 루프]
+  │   └── Subtask (하위작업) - T1-S3 → [Mini TDD 루프]
+  │
+  └── Task (작업) - T2
+      ├── Subtask - T2-S1 → [Mini TDD 루프]
+      └── Subtask - T2-S2 → [Mini TDD 루프]
+```
+
+- **Request**: 사용자 원본 요청 (R1, R2, ...)
+- **Task**: 논리적 작업 단위 (T1, T2, ...)
+- **Subtask**: TDD 루프 적용 단위 (T1-S1, T1-S2, ...)
+
+### assumptions 작성 가이드
+
+코드 탐색 없이 작성하므로 **가정을 명시적으로 기록**해야 한다:
+
+1. **파일/디렉토리 구조**: "인증 관련 코드는 auth/ 또는 security/ 디렉토리에 있을 것"
+2. **프레임워크/라이브러리**: "Spring Security를 사용 중일 것"
+3. **기존 엔티티**: "User 엔티티가 이미 존재할 것"
+4. **코드 패턴**: "기존 코드가 레이어드 아키텍처를 따를 것"
+
+이 가정들은 Merge 페이즈에서 Code Explore 결과와 비교하여 검증된다.
+
+### 저장 위치
+
+오케스트레이터는 출력을 다음 경로에 저장한다:
+
+```
+.claude/orchestrator/sessions/{hash}/contracts/{requestId}/task-breakdown.yaml
+```
