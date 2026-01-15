@@ -419,9 +419,15 @@ def output_json(data: Dict[str, Any]) -> None:
     print(json.dumps(data, ensure_ascii=False))
 
 
-def output_result(message: str) -> None:
-    """결과 메시지 출력"""
-    output_json({"result": message})
+def output_result(message: str, hook_event: str = "UserPromptSubmit") -> None:
+    """Claude 컨텍스트에 메시지 주입 (Claude Code 공식 형식)"""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": hook_event,
+            "additionalContext": message
+        }
+    }
+    print(json.dumps(output, ensure_ascii=False))
 
 
 def get_timestamp() -> str:

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-01-15
+
+### Fixed
+
+- **훅 출력 형식 수정**: Claude Code 공식 규격에 맞게 변경
+  - `{"result": message}` → `{"hookSpecificOutput": {"additionalContext": message}}`
+  - 오케스트레이션 지시문이 Claude 컨텍스트에 올바르게 주입됨
+  - 참고: [sisyphus](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus) 구현 분석
+
 ## [1.6.2] - 2026-01-15
 
 ### Added
