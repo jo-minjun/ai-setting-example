@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.common import (
     read_stdin_json,
     output_result,
+    log_orchestrator,
     get_project_hash,
     load_state,
     load_knowledge,
@@ -122,11 +123,13 @@ def main():
                 current_work = get_current_work(state)
                 knowledge = load_knowledge(project_hash)
                 message = generate_recovery_message(state, current_work, knowledge)
+                log_orchestrator(f"Session found: {pending_subtasks} subtasks remaining")
                 output_result(message, hook_event="SessionStart")
                 return
 
     # 3. 기존 세션 없거나 완료 상태 → 새 세션 준비 안내
     message = generate_new_session_message()
+    log_orchestrator("Ready")
     output_result(message, hook_event="SessionStart")
 
 

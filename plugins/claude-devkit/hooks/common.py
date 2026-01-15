@@ -430,6 +430,11 @@ def output_result(message: str, hook_event: str = "UserPromptSubmit") -> None:
     print(json.dumps(output, ensure_ascii=False))
 
 
+def log_orchestrator(message: str) -> None:
+    """오케스트레이션 진행 상황을 stderr로 출력 (사용자에게 보임)"""
+    print(f"[Orchestrator] {message}", file=sys.stderr)
+
+
 def get_timestamp() -> str:
     """현재 시각 ISO 8601 형식"""
     return datetime.utcnow().isoformat() + "Z"

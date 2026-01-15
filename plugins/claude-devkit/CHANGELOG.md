@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2026-01-15
+
+### Added
+
+- **오케스트레이션 진행 상황 stderr 출력**: 훅 실행 시 터미널에서 진행 상황 확인 가능
+  - `log_orchestrator()` 함수로 `[Orchestrator]` 메시지를 stderr로 출력
+  - 세션 시작/재개, 상태 전환, 에이전트 완료 시 로깅
+  - stdout(JSON 응답)과 분리되어 Claude Code 파싱에 영향 없음
+
 ## [1.6.4] - 2026-01-15
 
 ### Fixed

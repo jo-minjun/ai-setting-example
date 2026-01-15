@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.common import (
     read_stdin_json,
     output_result,
+    log_orchestrator,
     get_project_hash,
     load_state,
     save_state,
@@ -268,8 +269,10 @@ def main():
         if has_active_session:
             current_work = get_current_work(state)
             message = generate_resume_message(state, current_work)
+            log_orchestrator("Resuming session")
             output_result(message, hook_event="UserPromptSubmit")
         else:
+            log_orchestrator("No session to resume")
             output_result("[Orchestrator] 재개할 세션이 없습니다. 새 요청을 입력하세요.", hook_event="UserPromptSubmit")
         return
 
@@ -280,6 +283,7 @@ def main():
             state["request"]["status"] = "cancelled"
             save_state(project_hash, state)
 
+        log_orchestrator("Starting new session")
         output_result("[Orchestrator] 새 세션을 시작합니다. 요청을 입력하세요.", hook_event="UserPromptSubmit")
         return
 
@@ -289,6 +293,7 @@ def main():
         if has_active_session and is_same_session(state):
             current_work = get_current_work(state)
             message = generate_resume_message(state, current_work)
+            log_orchestrator("Continuing session")
             output_result(message, hook_event="UserPromptSubmit")
         return
 
@@ -303,6 +308,7 @@ def main():
 
     # 6. 시작 메시지 출력
     message = generate_orchestration_start_message(prompt)
+    log_orchestrator("New session started - Global Discovery")
     output_result(message, hook_event="UserPromptSubmit")
 
 

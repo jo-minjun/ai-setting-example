@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.common import (
     read_stdin_json,
     output_result,
+    log_orchestrator,
     get_project_hash,
     load_state,
     load_knowledge,
@@ -108,6 +109,7 @@ def main():
                 "To explicitly stop: '/orchestrator stop'",
             ])
 
+            log_orchestrator(f"Incomplete: {pending_subtasks} subtasks remaining")
             output_result("\n".join(lines), hook_event="Stop")
 
         elif request_status == "completed":

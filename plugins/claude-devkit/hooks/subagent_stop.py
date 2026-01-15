@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.common import (
     read_stdin_json,
     output_result,
+    log_orchestrator,
     get_project_hash,
     load_state,
     get_current_work,
@@ -119,8 +120,10 @@ def main():
     if created_contracts:
         contracts_str = ", ".join(created_contracts)
         lines.append(f"[{agent_type.title()} completed] {contracts_str} created")
+        log_orchestrator(f"{agent_type.title()} completed: {contracts_str}")
     else:
         lines.append(f"[{agent_type.title()} completed]")
+        log_orchestrator(f"{agent_type.title()} completed")
 
     if next_message:
         lines.append(f"-> {next_message}")

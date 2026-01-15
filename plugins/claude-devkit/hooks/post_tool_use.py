@@ -23,6 +23,7 @@ from hooks.common import (
     read_stdin_json,
     output_result,
     output_json,
+    log_orchestrator,
     get_project_hash,
     load_knowledge,
     save_knowledge,
@@ -332,8 +333,12 @@ def main():
     all_outputs = []
     if updates:
         all_outputs.append(f"knowledge.yaml updated: {', '.join(updates)}")
+        log_orchestrator(f"knowledge.yaml updated: {', '.join(updates)}")
     if messages:
         all_outputs.extend(messages)
+        for msg in messages:
+            if msg.startswith("[State]"):
+                log_orchestrator(msg.replace("[State] ", ""))
 
     if all_outputs:
         output_result("\n".join(all_outputs), hook_event="PostToolUse")
