@@ -2,90 +2,82 @@
 
 Claude Code의 AI 개발 능력을 확장하는 플러그인입니다.
 
-## 설치
+## Quick Start
+
+### 1. 설치
 
 ```bash
 /plugin marketplace add jo-minjun/claude-devkit
 /plugin install claude-devkit@jo-minjun
 ```
 
----
-
-## 빠른 시작
-
-### TDD 자동 개발 (오케스트레이터)
+### 2. 바로 사용하기
 
 ```
-/orchestrator 로그인 기능 추가해줘
+# TDD 기반 자동 개발
+로그인 기능 추가해줘
+
+# 에이전트 생성
+코드 리뷰 에이전트 만들어줘
+
+# MCP 서버 생성
+GitHub API MCP 서버 만들어줘
+
+# 프롬프트 생성
+코드 리뷰 프롬프트 만들어줘
 ```
 
-자동으로 다음이 실행됩니다:
-1. 프로젝트 분석 + 작업 분해
-2. 설계 결정
-3. 테스트 먼저 작성
-4. 구현
-5. 검증
-
-### 생성 도구
-
-```
-에이전트 만들어줘            → agent-creator
-MCP 서버 만들어줘           → mcp-builder
-프롬프트 만들어줘            → prompt-generator
-```
+설치 후 자연어로 요청하면 자동으로 적절한 도구가 실행됩니다.
 
 ---
 
-## 오케스트레이터 사용법
+## 선택적 의존성
 
-### 기본 사용
+### claude-mem (메모리 플러그인)
+
+세션 간 컨텍스트를 유지하려면 [claude-mem](https://github.com/thedotmack/claude-mem) 플러그인을 함께 설치하세요.
+
+```bash
+> /plugin marketplace add thedotmack/claude-mem
+> /plugin install claude-mem
+```
+
+**claude-mem 없이도 모든 기능이 정상 작동합니다.** claude-mem을 설치하면:
+- 이전 세션의 작업 내용을 기억
+- 프로젝트별 학습 내용 축적
+- 세션 시작 시 관련 컨텍스트 자동 주입
+
+---
+
+## 주요 기능
+
+### 오케스트레이터 - TDD 기반 자동 개발
+
+복잡한 기능을 자동으로 분석, 설계, 테스트, 구현합니다.
 
 ```
 # 슬래시 명령어
 /orchestrator 로그인 기능 추가해줘
 
 # 자연어 (자동 트리거)
-로그인 기능 추가해줘
 회원가입 만들어줘
 장바구니 기능 구현해줘
 ```
 
-### 세션 관리
-
+**자동 실행 흐름:**
 ```
-# 중단된 작업 재개
-/orchestrator resume
-
-# 프로젝트 패턴/실패 학습
-/orchestrator learn
+요청 → 프로젝트 분석 → 작업 분해 → 설계 → 테스트 작성 → 구현 → 검증
 ```
 
-### 생성되는 파일
-
+**세션 관리:**
 ```
-.claude/orchestrator/
-├── sessions/{hash}/          # 세션 상태
-│   ├── session.json
-│   ├── state.json
-│   └── contracts/            # 에이전트 산출물
-└── knowledge/{hash}/
-    └── knowledge.yaml        # 학습된 패턴
+/orchestrator resume    # 중단된 작업 재개
+/orchestrator learn     # 프로젝트 패턴 학습
 ```
 
-> `.gitignore`에 `.claude/orchestrator/` 추가 권장
+### 에이전트 생성기
 
----
-
-## 스킬 사용법
-
-### orchestrator - TDD 개발
-
-```
-/orchestrator {요청}
-또는: ~해줘, ~만들어줘, ~추가해줘
-```
-
-### agent-creator - 에이전트 생성
+커스텀 에이전트를 쉽게 만들 수 있습니다.
 
 ```
 /agent-creator
@@ -94,78 +86,60 @@ MCP 서버 만들어줘           → mcp-builder
 
 생성 위치: `.claude/agents/{name}.md`
 
-### skill-creator - 스킬 생성
+### 스킬 생성기
+
+반복 작업을 자동화하는 스킬을 만듭니다.
 
 ```
 /skill-creator
 또는: 배포 스킬 만들어줘
 ```
 
-### mcp-builder - MCP 서버 생성
+### MCP 서버 빌더
+
+외부 API와 연동하는 MCP 서버를 생성합니다.
 
 ```
 /mcp-builder
 또는: GitHub API MCP 서버 만들어줘
 ```
 
-지원: Python (FastMCP), Node.js (MCP SDK)
+지원 언어: Python (FastMCP), Node.js (MCP SDK)
 
-### prompt-generator - 프롬프트 생성
+### 프롬프트 생성기
+
+효과적인 프롬프트를 자동 생성합니다.
 
 ```
 /prompt-generator
 또는: 코드 리뷰 프롬프트 만들어줘
 ```
 
-### hook-generator - Hook 생성
+### Hook 생성기
+
+Claude Code 이벤트에 반응하는 훅을 만듭니다.
 
 ```
 /hook-generator
 또는: 파일 보호 훅 만들어줘
 ```
 
-생성 위치: `.claude/settings.json`
-
-### agent-manifest-aligner - 매니페스트 정렬
-
-```
-AGENTS.md 연결해줘
-CLAUDE.md 설정해줘
-```
-
 ---
 
-## 알아두면 좋은 개념
+## 생성 파일
 
-### 오케스트레이터 실행 흐름
-
-```
-요청 → [Code Explore + Planner] → [Architect] → [QA → Impl → QA] × N → 완료
-       ─────────────────────────   ──────────   ─────────────────
-         프로젝트 분석 + 계획          설계       Subtask마다 반복
-```
-
-### 3-tier 구조
+오케스트레이터 사용 시 다음 파일들이 생성됩니다:
 
 ```
-Request (전체 요청)
-└── Task (작업 단위)
-    └── Subtask (TDD 단위)
+.claude/orchestrator/
+├── sessions/{hash}/          # 세션 상태
+│   ├── state.json
+│   └── contracts/            # 에이전트 산출물
+└── knowledge/{hash}/
+    └── knowledge.yaml        # 학습된 패턴
 ```
 
-### Contract
-
-에이전트 간 YAML 파일로 정보 전달:
-- `explored.yaml` - 프로젝트 구조
-- `task-breakdown.yaml` - 작업 분해
-- `design-contract.yaml` - 설계 명세
-- `test-contract.yaml` - 테스트 명세
-
-### Gate
-
-다음 단계 진행 조건:
-- 테스트 없이 구현 불가 (GATE-1)
-- 검증 없이 완료 불가 (GATE-2)
+> `.gitignore`에 `.claude/orchestrator/` 추가 권장
 
 ---
 

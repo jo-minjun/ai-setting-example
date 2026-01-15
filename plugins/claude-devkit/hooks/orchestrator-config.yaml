@@ -1,0 +1,142 @@
+version: "1.0.0"
+description: "Claude DevKit Orchestration Configuration"
+
+orchestration:
+  enabled: true
+  auto_session_create: true
+  gate_enforcement: block  # block | warn
+
+keywords:
+  trigger:
+    - "구현해\\s*줘"
+    - "만들어\\s*줘"
+    - "추가해\\s*줘"
+    - "개발해\\s*줘"
+    - "변경해\\s*줘"
+    - "수정해\\s*줘"
+    - "/orchestrator"
+    - "/orchestrate"
+  skip:
+    - "설명해\\s*줘"
+    - "알려\\s*줘"
+    - "찾아\\s*줘"
+    - "검색해\\s*줘"
+    - "조사해\\s*줘"
+    - "분석해\\s*줘"
+
+agents:
+  code-explore:
+    output: explored.yaml
+    next_phase: merge
+    level: request
+  planner:
+    output: task-breakdown.yaml
+    next_phase: merge
+    level: request
+  architect:
+    output: design-contract.yaml
+    next_phase: test_first
+    level: task
+  qa-engineer:
+    outputs:
+      - test-contract.yaml
+      - test-result.yaml
+    next_phase_map:
+      test_first: implementation
+      verification: complete
+    level: subtask
+  implementer:
+    output: null
+    next_phase: verification
+    level: subtask
+
+gates:
+  GATE-1:
+    condition: test-contract.yaml exists
+    blocks: implementation
+    message: "테스트 Contract가 없습니다. Test First를 완료하세요."
+  GATE-2:
+    condition: test-result.yaml exists
+    blocks: complete
+    message: "테스트 결과가 없습니다. Verification을 완료하세요."
+  GATE-3:
+    condition: scope unchanged
+    blocks: implementation
+    message: "스코프가 변경되었습니다. Planning으로 돌아가세요."
+  GATE-4:
+    condition: design invariants maintained
+    blocks: implementation
+    message: "설계 불변 조건이 위반되었습니다. Design으로 돌아가세요."
+
+knowledge:
+  auto_update: true
+  extract_from:
+    - design-contract.yaml
+    - test-result.yaml
+  detect_patterns: true
+  pattern_sources:
+    - Read
+    - Write
+    - Edit
+
+# Phase 전환 매핑
+phase_transitions:
+  global_discovery:
+    next: task_loop
+    requires:
+      - explored.yaml
+      - task-breakdown.yaml
+  task_loop:
+    next: complete
+    requires_all_tasks_done: true
+  test_first:
+    next: implementation
+    requires:
+      - test-contract.yaml
+    gate: GATE-1
+  implementation:
+    next: verification
+    gates:
+      - GATE-3
+      - GATE-4
+  verification:
+    next: complete
+    requires:
+      - test-result.yaml
+    gate: GATE-2
+
+# 오케스트레이션 지시문 템플릿
+templates:
+  orchestration_start: |
+    [TDD Orchestration Mode Activated]
+
+    이 요청을 TDD 방식으로 처리합니다.
+
+    1. 프로젝트 구조 탐색 (Code Explore 에이전트 병렬 호출)
+    2. Task/Subtask 분해 (Planner 에이전트 호출)
+    3. 각 Task에 대해:
+       - 설계 (Architect 에이전트)
+       - 테스트 먼저 작성 (QA Engineer 에이전트)
+       - 구현 (Implementer 에이전트)
+       - 검증 (QA Engineer 에이전트)
+
+    완료까지 자동으로 진행합니다.
+
+  session_resume: |
+    [Orchestration Session Resumed]
+
+    중단된 세션을 재개합니다.
+
+    현재 상태: {global_phase}
+    현재 Task: {current_task}
+    현재 Subtask: {current_subtask}
+    현재 Phase: {phase}
+
+    다음 단계부터 진행합니다.
+
+  gate_blocked: |
+    [GATE BLOCKED: {gate_id}]
+
+    {message}
+
+    이 게이트를 통과하려면 필요한 조건을 충족해야 합니다.

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-15
+
+### Added
+
+- **오케스트레이터 훅 기반 아키텍처**: 스킬 기반에서 훅 기반으로 전면 전환
+  - `hooks/` 디렉토리에 8개 훅 이벤트 핸들러 구현
+  - SessionStart: 세션 복구 및 새 세션 준비
+  - UserPromptSubmit: 키워드 감지 및 오케스트레이션 시작
+  - PostToolUse: Contract 파일 감지 및 자동 phase 전환
+  - SubagentStop: 에이전트 완료 시 다음 단계 안내
+  - Stop: 미완료 작업 경고
+  - PreCompact: 컨텍스트 압축 시 세션 상태 보존
+  - `orchestrator-config.yaml`로 선언적 설정 (에이전트, 게이트, phase 전환 규칙)
+  - `common.py`에 공통 유틸리티 함수 집중
+
+### Changed
+
+- **README.md 사용자 친화적 재작성**
+  - Quick Start 섹션을 최상단에 배치
+  - claude-mem이 선택적 의존성임을 명시 (없어도 모든 기능 정상 작동)
+  - 사용 예시 중심으로 간결하게 구성
+
+### Removed
+
+- **orchestrator 스킬 제거**: 훅 기반으로 전환되어 스킬 방식 삭제
+  - SKILL.md 및 references/ 디렉토리 전체 (12개 파일)
+
 ## [1.5.2] - 2026-01-14
 
 ### Added
