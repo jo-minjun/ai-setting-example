@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-01-15
+
+### Added
+
+- **세션 ID 기반 오케스트레이션 연속성**: reject 후에도 같은 Claude Code 세션이면 자동으로 컨텍스트 주입
+  - SessionStart 훅에서 세션 시작 시 고유 ID 생성
+  - UserPromptSubmit 훅에서 세션 ID 비교하여 연속성 판단
+  - 트리거 키워드 없이도 같은 세션 내에서 오케스트레이션 지속
+
 ## [1.6.1] - 2026-01-15
 
 ### Fixed

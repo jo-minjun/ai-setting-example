@@ -9,6 +9,7 @@ Claude 세션이 시작될 때 실행되어:
 
 import sys
 import os
+import uuid
 
 # hooks 패키지 경로 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,6 +26,7 @@ from hooks.common import (
     format_progress_tree,
     format_knowledge_summary,
     initialize_session,
+    save_current_session_id,
 )
 
 
@@ -96,6 +98,10 @@ def main():
     """SessionStart Hook 메인 함수"""
     # stdin에서 입력 읽기 (프로토콜 준수)
     input_data = read_stdin_json()
+
+    # 새 Claude Code 세션 ID 생성 및 저장
+    session_id = str(uuid.uuid4())[:8]
+    save_current_session_id(session_id)
 
     project_hash = get_project_hash()
 

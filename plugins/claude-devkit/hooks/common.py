@@ -151,6 +151,41 @@ def get_project_hash() -> str:
     return hashlib.md5(cwd.encode()).hexdigest()[:8]
 
 
+# =============================================================================
+# Claude Code 세션 ID 관련 함수
+# =============================================================================
+
+def get_session_id_file() -> Path:
+    """현재 Claude Code 세션 ID 파일 경로"""
+    return Path.home() / ".claude-devkit-session-id"
+
+
+def get_current_session_id() -> Optional[str]:
+    """현재 Claude Code 세션 ID 읽기"""
+    session_file = get_session_id_file()
+    if session_file.exists():
+        try:
+            return session_file.read_text(encoding="utf-8").strip()
+        except IOError:
+            pass
+    return None
+
+
+def save_current_session_id(session_id: str) -> None:
+    """현재 Claude Code 세션 ID 저장"""
+    try:
+        get_session_id_file().write_text(session_id, encoding="utf-8")
+    except IOError:
+        pass
+
+
+def is_same_session(state: Dict[str, Any]) -> bool:
+    """state의 세션 ID와 현재 세션 ID 비교"""
+    current_id = get_current_session_id()
+    state_id = state.get("request", {}).get("claude_session_id")
+    return bool(current_id and state_id and current_id == state_id)
+
+
 def get_orchestrator_base_path() -> Path:
     """오케스트레이터 기본 경로 반환"""
     return Path(os.getcwd()) / ".claude" / "orchestrator"
@@ -493,6 +528,7 @@ def create_initial_state(project_hash: str, request: str) -> Dict[str, Any]:
             "global_phase": "global_discovery",
             "current_task": None,
             "created_at": get_timestamp(),
+            "claude_session_id": get_current_session_id(),
         },
         "task_order": [],
         "tasks": {},

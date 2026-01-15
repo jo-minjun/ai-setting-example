@@ -28,6 +28,7 @@ from hooks.common import (
     get_template,
     initialize_session,
     count_pending_subtasks,
+    is_same_session,
 )
 
 
@@ -284,6 +285,11 @@ def main():
 
     # 3. 오케스트레이션 키워드 감지
     if not is_orchestration_keyword(prompt):
+        # active 세션이 있고, 같은 Claude Code 세션이면 컨텍스트 주입
+        if has_active_session and is_same_session(state):
+            current_work = get_current_work(state)
+            message = generate_resume_message(state, current_work)
+            output_json({"result": message, "continue": True})
         return
 
     # 4. 세션 처리
