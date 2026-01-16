@@ -11,10 +11,10 @@ CHANGELOG.md와 플러그인 버전 파일들을 일괄 업데이트하고 Git �
 
 ### 1. 현재 버전 확인
 
-`plugins/claude-devkit/.claude-plugin/plugin.json`에서 현재 버전을 읽는다.
+`plugins/orchestrator/.claude-plugin/plugin.json`에서 현재 버전을 읽는다.
 
 ```bash
-cat plugins/claude-devkit/.claude-plugin/plugin.json | grep '"version"'
+cat plugins/orchestrator/.claude-plugin/plugin.json | grep '"version"'
 ```
 
 ### 2. 새 버전 결정
@@ -48,9 +48,9 @@ cat plugins/claude-devkit/.claude-plugin/plugin.json | grep '"version"'
 
 | 파일 | 수정 내용 |
 |------|----------|
-| `plugins/claude-devkit/CHANGELOG.md` | 새 버전 섹션 추가 |
+| `plugins/orchestrator/CHANGELOG.md` | 새 버전 섹션 추가 |
 | `.claude-plugin/marketplace.json` | `metadata.version` 업데이트 |
-| `plugins/claude-devkit/.claude-plugin/plugin.json` | `version` 업데이트 |
+| `plugins/orchestrator/.claude-plugin/plugin.json` | `version` 업데이트 |
 
 ### 5. Git 커밋
 
@@ -77,9 +77,9 @@ EOF
 날짜: YYYY-MM-DD
 
 ### 수정된 파일
-- plugins/claude-devkit/CHANGELOG.md
+- plugins/orchestrator/CHANGELOG.md
 - .claude-plugin/marketplace.json
-- plugins/claude-devkit/.claude-plugin/plugin.json
+- plugins/orchestrator/.claude-plugin/plugin.json
 
 ### 변경사항 요약
 - Added: ...

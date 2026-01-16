@@ -121,13 +121,13 @@ def get_next_action_instruction(global_phase: str, phase: str, current_work: dic
 
 1. Code Explore 에이전트 호출:
    ```
-   Task tool 사용, subagent_type: "claude-devkit:code-explore"
+   Task tool 사용, subagent_type: "orchestrator:code-explore"
    프롬프트: "프로젝트 구조를 탐색하고 explored.yaml로 저장해줘"
    ```
 
 2. Planner 에이전트 호출 (병렬):
    ```
-   Task tool 사용, subagent_type: "claude-devkit:planner"
+   Task tool 사용, subagent_type: "orchestrator:planner"
    프롬프트: "요청을 Task/Subtask로 분해하고 task-breakdown.yaml로 저장해줘"
    ```
 
@@ -143,7 +143,7 @@ def get_next_action_instruction(global_phase: str, phase: str, current_work: dic
 
 Architect 에이전트 호출:
 ```
-Task tool 사용, subagent_type: "claude-devkit:architect"
+Task tool 사용, subagent_type: "orchestrator:architect"
 프롬프트: "{task_name} 설계하고 design-contract.yaml로 저장해줘"
 ```"""
 
@@ -157,7 +157,7 @@ Task tool 사용, subagent_type: "claude-devkit:architect"
 
 QA Engineer 에이전트 호출:
 ```
-Task tool 사용, subagent_type: "claude-devkit:qa-engineer"
+Task tool 사용, subagent_type: "orchestrator:qa-engineer"
 프롬프트: "{subtask_name}에 대한 테스트 케이스를 작성하고 test-contract.yaml로 저장해줘"
 ```
 
@@ -173,7 +173,7 @@ Task tool 사용, subagent_type: "claude-devkit:qa-engineer"
 
 Implementer 에이전트 호출:
 ```
-Task tool 사용, subagent_type: "claude-devkit:implementer"
+Task tool 사용, subagent_type: "orchestrator:implementer"
 프롬프트: "{subtask_name}을 구현해줘. test-contract.yaml의 테스트를 통과하도록 작성해줘"
 ```"""
 
@@ -187,7 +187,7 @@ Task tool 사용, subagent_type: "claude-devkit:implementer"
 
 QA Engineer 에이전트 호출:
 ```
-Task tool 사용, subagent_type: "claude-devkit:qa-engineer"
+Task tool 사용, subagent_type: "orchestrator:qa-engineer"
 프롬프트: "{subtask_name} 구현을 검증하고 test-result.yaml로 결과를 저장해줘"
 ```
 

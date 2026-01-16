@@ -1,4 +1,4 @@
-# claude-devkit
+# orchestrator
 
 Claude Code의 AI 개발 능력을 확장하는 플러그인입니다.
 
@@ -7,8 +7,8 @@ Claude Code의 AI 개발 능력을 확장하는 플러그인입니다.
 ### 1. 설치
 
 ```bash
-/plugin marketplace add jo-minjun/claude-devkit
-/plugin install claude-devkit@jo-minjun
+/plugin marketplace add jo-minjun/orchestrator
+/plugin install orchestrator@jo-minjun
 ```
 
 ### 2. 바로 사용하기

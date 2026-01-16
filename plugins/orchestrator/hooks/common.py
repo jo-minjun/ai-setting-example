@@ -157,7 +157,7 @@ def get_project_hash() -> str:
 
 def get_session_id_file() -> Path:
     """현재 Claude Code 세션 ID 파일 경로"""
-    return Path.home() / ".claude-devkit-session-id"
+    return Path.home() / ".orchestrator-session-id"
 
 
 def get_current_session_id() -> Optional[str]:
