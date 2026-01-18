@@ -1,0 +1,10 @@
+{
+  "name": "plan-boost",
+  "version": "1.0.0",
+  "description": "플랜모드 코드 개발 후 code-simplifier 자동 리팩터링",
+  "author": {
+    "name": "minjun"
+  },
+  "license": "MIT",
+  "keywords": ["claude-code", "plan-mode", "refactoring", "code-simplifier"]
+}

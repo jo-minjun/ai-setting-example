@@ -14,6 +14,11 @@
       "name": "orchestrator",
       "source": "./plugins/orchestrator",
       "description": "TDD 오케스트레이션, 에이전트/스킬 생성, MCP 빌더 등 AI 개발 도구 모음"
+    },
+    {
+      "name": "plan-boost",
+      "source": "./plugins/plan-boost",
+      "description": "플랜모드 코드 개발 후 code-simplifier 자동 리팩터링"
     }
   ]
 }
